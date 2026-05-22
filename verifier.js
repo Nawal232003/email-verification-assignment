@@ -2,14 +2,11 @@ const dns = require('dns');
 const net = require('net');
 const { getDidYouMean } = require('./typoDetector');
 
-// Basic regex for email syntax validation
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateSyntax(email) {
   if (!email || typeof email !== 'string') return false;
   if (email.length > 254) return false;
-  
-  // Quick check for multiple @ symbols or invalid dots
   if (email.indexOf('@') !== email.lastIndexOf('@')) return false;
   if (email.includes('..')) return false;
 
@@ -22,7 +19,6 @@ function resolveMxRecords(domain) {
       if (err || !addresses || addresses.length === 0) {
         resolve([]);
       } else {
-        // Sort by priority, lowest first
         addresses.sort((a, b) => a.priority - b.priority);
         resolve(addresses.map(record => record.exchange));
       }
@@ -37,7 +33,6 @@ function checkSMTP(mxRecord, email, senderEmail = 'verify@example.com') {
     let responseData = '';
     let resolved = false;
 
-    // Timeout after 5 seconds to prevent hanging
     socket.setTimeout(5000);
 
     const finish = (result) => {
@@ -51,22 +46,18 @@ function checkSMTP(mxRecord, email, senderEmail = 'verify@example.com') {
     socket.on('data', (data) => {
       responseData += data.toString();
       
-      // Wait until we have a complete line (ending with \r\n)
       if (!responseData.endsWith('\r\n')) {
           return; 
       }
       
-      // Sometimes SMTP servers send multiple lines (e.g. 250-something\r\n250 something else)
-      // We look at the first 3 characters of the LAST line, or just parse the overall code
       const lines = responseData.trim().split('\n');
       const lastLine = lines[lines.length - 1];
       const responseCode = parseInt(lastLine.substring(0, 3), 10);
       
-      responseData = ''; // Clear for next response
+      responseData = '';
 
-      // Handle server responses based on the current step
       switch (step) {
-        case 0: // Welcome message (e.g., 220)
+        case 0:
           if (responseCode === 220) {
             socket.write(`EHLO example.com\r\n`);
             step++;
@@ -74,7 +65,7 @@ function checkSMTP(mxRecord, email, senderEmail = 'verify@example.com') {
             finish({ code: responseCode, status: 'unknown', subresult: 'connection_error' });
           }
           break;
-        case 1: // EHLO response (e.g., 250)
+        case 1:
           if (responseCode === 250) {
             socket.write(`MAIL FROM:<${senderEmail}>\r\n`);
             step++;
@@ -82,7 +73,7 @@ function checkSMTP(mxRecord, email, senderEmail = 'verify@example.com') {
             finish({ code: responseCode, status: 'unknown', subresult: 'ehlo_failed' });
           }
           break;
-        case 2: // MAIL FROM response (e.g., 250)
+        case 2:
           if (responseCode === 250) {
             socket.write(`RCPT TO:<${email}>\r\n`);
             step++;
@@ -90,7 +81,7 @@ function checkSMTP(mxRecord, email, senderEmail = 'verify@example.com') {
             finish({ code: responseCode, status: 'unknown', subresult: 'mail_from_failed' });
           }
           break;
-        case 3: // RCPT TO response
+        case 3:
           if (responseCode === 250 || responseCode === 251) {
             socket.write(`QUIT\r\n`);
             finish({ code: responseCode, status: 'valid', subresult: 'mailbox_exists' });
@@ -98,7 +89,6 @@ function checkSMTP(mxRecord, email, senderEmail = 'verify@example.com') {
             socket.write(`QUIT\r\n`);
             finish({ code: responseCode, status: 'invalid', subresult: 'mailbox_does_not_exist' });
           } else if (responseCode >= 400 && responseCode < 500) {
-            // Greylisting or temporary failure (450, 451, 452)
             socket.write(`QUIT\r\n`);
             finish({ code: responseCode, status: 'unknown', subresult: 'greylisted' });
           } else {
@@ -136,14 +126,12 @@ async function verifyEmail(email) {
     timestamp: new Date().toISOString()
   };
 
-  // 1. Validate Syntax
   if (!validateSyntax(email)) {
     resultObj.result = "invalid";
     resultObj.resultcode = 6;
     resultObj.subresult = "invalid_syntax";
   }
 
-  // 2. Typo Detection
   const didYouMean = getDidYouMean(email);
   if (didYouMean) {
     resultObj.didyoumean = didYouMean;
@@ -166,7 +154,6 @@ async function verifyEmail(email) {
   const domain = email.split('@')[1];
   resultObj.domain = domain;
 
-  // 3. DNS MX Lookup
   try {
     const mxRecords = await resolveMxRecords(domain);
     resultObj.mxRecords = mxRecords;
@@ -179,7 +166,6 @@ async function verifyEmail(email) {
       return resultObj;
     }
 
-    // 4. SMTP Connection Check
     const mxToTry = mxRecords[0];
     const smtpResult = await checkSMTP(mxToTry, email);
 

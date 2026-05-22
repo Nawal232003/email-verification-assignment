@@ -15,9 +15,9 @@ describe('Email Verifier Module', () => {
     });
 
     it('should reject invalid formats', () => {
-      expect(validateSyntax('userexample.com')).toBe(false); // missing @
-      expect(validateSyntax('user@example..com')).toBe(false); // double dot
-      expect(validateSyntax('user@@example.com')).toBe(false); // double @
+      expect(validateSyntax('userexample.com')).toBe(false);
+      expect(validateSyntax('user@example..com')).toBe(false);
+      expect(validateSyntax('user@@example.com')).toBe(false);
     });
 
     it('should reject email with spaces', () => {
@@ -50,7 +50,7 @@ describe('Email Verifier Module', () => {
 
     it('should not suggest correction for valid domains', () => {
       expect(getDidYouMean('user@gmail.com')).toBeNull();
-      expect(getDidYouMean('user@customdomain.com')).toBeNull(); // Distance > 2
+      expect(getDidYouMean('user@customdomain.com')).toBeNull();
     });
   });
 
@@ -97,13 +97,10 @@ describe('Email Verifier Module', () => {
       expect(result.resultcode).toBe(6);
     });
 
-    // Helper to simulate SMTP conversation
     const simulateSMTP = (socket, responses) => {
       socket.connect.mockImplementation(() => {
-        // Find the 'data' event handler
         const dataHandler = socket.on.mock.calls.find(call => call[0] === 'data')[1];
         
-        // Simulate sending responses sequentially
         responses.forEach((res, index) => {
           setTimeout(() => {
              dataHandler(res);

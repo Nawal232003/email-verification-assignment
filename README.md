@@ -1,6 +1,28 @@
 # Email Verifier Module
 
-A Node.js module and REST API that provides comprehensive email address verification. It validates syntax, catches common domain typos, resolves MX records, and actively checks for the mailbox's existence using the SMTP protocol.
+A robust Node.js module and REST API for comprehensive email address verification.
+
+## Assignment Fulfillment
+
+### Part 1: Core Email Verification Function
+- **Syntax Validation:** Handles format checking, string length, and multiple/missing `@` constraints.
+- **DNS MX Lookup:** Uses Node's native `dns` module to resolve mail servers and sorts them by priority.
+- **SMTP Verification:** Connects to the target MX server via native `net` TCP sockets. Simulates the `EHLO`, `MAIL FROM`, and `RCPT TO` sequence to verify mailbox existence. Returns the required structured JSON output with appropriate error codes (1=valid, 3=unknown, 6=invalid) and execution times.
+
+### Part 2: "Did You Mean?" Typo Detection
+- Custom implementation of the **Levenshtein distance algorithm**.
+- Fuzzy matches domains against a common list (`gmail.com`, `yahoo.com`, `hotmail.com`, `outlook.com`) with an edit distance of ≤ 2.
+- Automatically flags typos as `invalid` and appends the corrected domain to the `didyoumean` key.
+
+### Part 3: Unit Tests
+- Test-driven suite implemented using **Jest**.
+- **16 distinct test cases** covering all assignment requirements:
+  - Syntax valid/invalid formats.
+  - SMTP mock simulation handling `250`, `550`, and `450` codes.
+  - Connection timeouts via mocked TCP sockets.
+  - Edge cases (null, empty strings, max length violations, multi-symbol checks).
+
+---
 
 ## Live API Demo
 The API is currently deployed on Vercel. You can test it by passing an email address as a query parameter:
@@ -17,13 +39,6 @@ Vercel, AWS, and most cloud providers **block outbound traffic on Port 25 (SMTP)
 To see the full SMTP verification succeed, please run the application or the test suite **locally**.
 
 ---
-
-## Features
-- **Syntax Validation**: Ensures emails conform to the standard format.
-- **Typo Detection**: Utilizes a custom Levenshtein distance algorithm to identify and suggest corrections for common domain typos (e.g., `gmial.com` to `gmail.com`).
-- **DNS MX Lookup**: Verifies that the domain is configured to receive emails using Node's native `dns` module.
-- **Active SMTP Checking**: Uses Node's native `net` TCP sockets to simulate an email dispatch (`EHLO`, `MAIL FROM`, `RCPT TO`) to confirm mailbox existence without sending a payload.
-- **Robust Error Handling**: Identifies connection timeouts, temporary failures (like greylisting), and permanent rejections (e.g., 550 errors).
 
 ## Installation & Local Usage
 
@@ -44,8 +59,7 @@ npm start
 *Then visit: `http://localhost:3000/api/verify?email=test@example.com`*
 
 ## Testing
-Run the comprehensive 16-case unit test suite using Jest. The test suite mocks the `net` and `dns` modules to simulate various server responses (250, 550, 450) without spamming external SMTP servers.
-
+Run the comprehensive 16-case unit test suite:
 ```bash
 npm test
 ```

@@ -24,10 +24,10 @@ function getLevenshteinDistance(a, b) {
         matrix[i][j] = matrix[i - 1][j - 1];
       } else {
         matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i - 1][j - 1] + 1,
           Math.min(
-            matrix[i][j - 1] + 1, // insertion
-            matrix[i - 1][j] + 1 // deletion
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
           )
         );
       }
@@ -50,7 +50,7 @@ function getDidYouMean(email) {
 
   for (const commonDomain of COMMON_DOMAINS) {
     if (domain === commonDomain) {
-      return null; // Exact match, no typo
+      return null;
     }
     
     const distance = getLevenshteinDistance(domain, commonDomain);
