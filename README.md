@@ -1,63 +1,51 @@
 # Email Verifier Module
 
-A Node.js module that provides comprehensive email address verification. It validates syntax, catches common domain typos, resolves MX records, and actively checks for the mailbox's existence using the SMTP protocol.
+A Node.js module and REST API that provides comprehensive email address verification. It validates syntax, catches common domain typos, resolves MX records, and actively checks for the mailbox's existence using the SMTP protocol.
+
+## Live API Demo
+The API is currently deployed on Vercel. You can test it by passing an email address as a query parameter:
+
+**Endpoint:**
+```
+https://email-verification-assignment.vercel.app/api/verify?email=test@example.com
+```
+
+### ⚠️ Important Note Regarding Live Deployment (Port 25)
+When testing the live Vercel URL, you may notice the response returns a `"connection_timeout"`. This is **expected behavior** for cloud deployments. 
+Vercel, AWS, and most cloud providers **block outbound traffic on Port 25 (SMTP)** to prevent spam abuse on their networks. The application successfully resolves the MX records but is blocked by the cloud provider's firewall from completing the final SMTP handshake. 
+
+To see the full SMTP verification succeed, please run the application or the test suite **locally**.
+
+---
 
 ## Features
-
 - **Syntax Validation**: Ensures emails conform to the standard format.
-- **Typo Detection**: Utilizes the Levenshtein distance algorithm to identify and suggest corrections for common domain typos (e.g., `gmial.com` to `gmail.com`).
-- **DNS MX Lookup**: Verifies that the domain is configured to receive emails.
-- **Active SMTP Checking**: Connects to the target MX server and simulates an email dispatch (`HELO`, `MAIL FROM`, `RCPT TO`) to confirm if the specific user mailbox exists without actually sending an email.
+- **Typo Detection**: Utilizes a custom Levenshtein distance algorithm to identify and suggest corrections for common domain typos (e.g., `gmial.com` to `gmail.com`).
+- **DNS MX Lookup**: Verifies that the domain is configured to receive emails using Node's native `dns` module.
+- **Active SMTP Checking**: Uses Node's native `net` TCP sockets to simulate an email dispatch (`EHLO`, `MAIL FROM`, `RCPT TO`) to confirm mailbox existence without sending a payload.
 - **Robust Error Handling**: Identifies connection timeouts, temporary failures (like greylisting), and permanent rejections (e.g., 550 errors).
 
-## Installation
+## Installation & Local Usage
 
-Clone the repository and install the dev dependencies (Jest) to run tests:
-
+1. Clone the repository and install dependencies:
 ```bash
 npm install
 ```
 
-## Usage
-
-```javascript
-const { verifyEmail, getDidYouMean } = require('./index');
-
-(async () => {
-  // Full verification
-  const result = await verifyEmail('user@example.com');
-  console.log(result);
-
-  // Example output for valid email:
-  // {
-  //   email: 'user@example.com',
-  //   result: 'valid', // 'valid', 'invalid', or 'unknown'
-  //   resultcode: 1,   // 1=valid, 6=invalid, 3=unknown
-  //   subresult: 'mailbox_exists',
-  //   domain: 'example.com',
-  //   mxRecords: ['mx1.example.com'],
-  //   executiontime: 0.15,
-  //   error: null,
-  //   timestamp: '2026-05-22T12:00:00.000Z'
-  // }
-
-  // Just checking for typos
-  const suggestion = getDidYouMean('user@gmial.com');
-  console.log(suggestion); // Output: 'user@gmail.com'
-})();
+2. Run the quick local demo to see it in action:
+```bash
+node demo.js
 ```
 
-## Testing
+3. Or, start the local Express API server:
+```bash
+npm start
+```
+*Then visit: `http://localhost:3000/api/verify?email=test@example.com`*
 
-Run the comprehensive unit test suite using Jest:
+## Testing
+Run the comprehensive 16-case unit test suite using Jest. The test suite mocks the `net` and `dns` modules to simulate various server responses (250, 550, 450) without spamming external SMTP servers.
 
 ```bash
 npm test
 ```
-
-## How It Works
-
-1. **Syntax Check**: Quick regex evaluation.
-2. **Typo Check**: Checks domain against a list of common providers.
-3. **DNS**: Uses Node's `dns` module to retrieve and sort MX records.
-4. **SMTP**: Uses Node's `net` module to establish a TCP connection to port 25 of the MX record.
